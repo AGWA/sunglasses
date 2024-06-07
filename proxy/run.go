@@ -30,6 +30,13 @@ type offsetCollapsedTree struct {
 	Offset uint64
 }
 
+type downloadLeavesJob struct {
+	tile   uint64
+	skip   uint64
+	tree   offsetCollapsedTree
+	hashes [][]byte
+}
+
 // insert newTree into trees such that it is sorted in descending order by Offset
 func insertPendingTree(trees []offsetCollapsedTree, newTree offsetCollapsedTree) []offsetCollapsedTree {
 	position := len(trees)
@@ -72,7 +79,7 @@ func (srv *Server) tick() error {
 	}
 	numTiles := endTile - firstTile
 
-	finishedTrees := make(chan offsetCollapsedTree)
+	finishedJobs := make(chan *downloadLeavesJob)
 	group, ctx := errgroup.WithContext(context.Background())
 	group.SetLimit(100)
 
@@ -80,19 +87,24 @@ func (srv *Server) tick() error {
 		position := merkletree.EmptyCollapsedTree()
 		var pending []offsetCollapsedTree
 		for range numTiles {
-			updatedPosition := false
+			var job *downloadLeavesJob
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case tree := <-finishedTrees:
-				if tree.Offset == position.Size() {
-					if err := position.Append(&tree.CollapsedTree); err != nil {
-						panic(err)
-					}
-					updatedPosition = true
-				} else {
-					pending = insertPendingTree(pending, tree)
+			case job = <-finishedJobs:
+			}
+			//log.Printf("finished downloading tile %d", job.tile)
+			if err := srv.indexLeaves(job.tile*entriesPerTile+job.skip, job.hashes); err != nil {
+				return fmt.Errorf("error indexing leaves: %w", err)
+			}
+			updatedPosition := false
+			if job.tree.Offset == position.Size() {
+				if err := position.Append(&job.tree.CollapsedTree); err != nil {
+					panic(err)
 				}
+				updatedPosition = true
+			} else {
+				pending = insertPendingTree(pending, job.tree)
 			}
 			for len(pending) > 0 && pending[len(pending)-1].Offset == position.Size() {
 				if err := position.Append(&pending[len(pending)-1].CollapsedTree); err != nil {
@@ -128,43 +140,62 @@ func (srv *Server) tick() error {
 		return nil
 	})
 	group.Go(func() error {
-		tree := offsetCollapsedTree{CollapsedTree: *position}
-		return srv.indexTile(ctx, sth, firstTile, firstTileSkip, tree, finishedTrees)
+		job := &downloadLeavesJob{
+			tile: firstTile,
+			skip: firstTileSkip,
+			tree: offsetCollapsedTree{CollapsedTree: *position},
+		}
+		return srv.downloadLeaves(ctx, sth, job, finishedJobs)
 	})
 	for tile := firstTile + 1; tile < endTile; tile++ {
 		group.Go(func() error {
-			tree := offsetCollapsedTree{Offset: tile * entriesPerTile}
-			return srv.indexTile(ctx, sth, tile, 0, tree, finishedTrees)
+			job := &downloadLeavesJob{
+				tile: tile,
+				tree: offsetCollapsedTree{Offset: tile * entriesPerTile},
+			}
+			return srv.downloadLeaves(ctx, sth, job, finishedJobs)
 		})
 	}
 	return group.Wait()
 }
 
-func (srv *Server) indexTile(ctx context.Context, sth *signedTreeHead, tile uint64, skip uint64, tree offsetCollapsedTree, finishedTrees chan<- offsetCollapsedTree) error {
+func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job *downloadLeavesJob, finishedJobs chan<- *downloadLeavesJob) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	numHashes := min(entriesPerTile, sth.TreeSize-tile*entriesPerTile)
+	numHashes := min(entriesPerTile, sth.TreeSize-job.tile*entriesPerTile)
 
-	//log.Printf("downloading and indexing leaf tile %d, expecting %d hashes, of which %d will be skipped...", tile, numHashes, skip)
+	//log.Printf("downloading leaf tile %d, expecting %d hashes, of which %d will be skipped...", tile, numHashes, skip)
 
-	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "0", tile)
+	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "0", job.tile)
 	if err != nil {
 		return err
 	}
-
 	if minLen := numHashes * merkleHashLen; uint64(len(data)) < minLen {
-		return fmt.Errorf("server returned %d bytes for tile %d, but we were expecting at least %d", len(data), tile, minLen)
+		return fmt.Errorf("server returned %d bytes for tile %d, but we were expecting at least %d", len(data), job.tile, minLen)
 	}
 
-	if err := srv.db.Update(func(tx *bolt.Tx) error {
+	data = data[job.skip*merkleHashLen:]
+
+	job.hashes = make([][]byte, numHashes-job.skip)
+	for i := range job.hashes {
+		job.hashes[i] = data[i*merkleHashLen : (i+1)*merkleHashLen]
+		job.tree.Add(merkletree.Hash(job.hashes[i]))
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case finishedJobs <- job:
+	}
+	return nil
+}
+
+func (srv *Server) indexLeaves(entryIndex uint64, hashes [][]byte) error {
+	return srv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(leafBucket)
 
-		for i := skip; i < numHashes; i++ {
-			entryIndex := tile*entriesPerTile + i
-			hash := data[i*merkleHashLen : (i+1)*merkleHashLen]
-			tree.Add(merkletree.Hash(hash))
-
+		for _, hash := range hashes {
 			var entryIndexBytes [8]byte
 			binary.BigEndian.PutUint64(entryIndexBytes[:], entryIndex)
 			currentEntryIndexBytes := bucket.Get(hash)
@@ -173,18 +204,10 @@ func (srv *Server) indexTile(ctx context.Context, sth *signedTreeHead, tile uint
 					return err
 				}
 			}
+			entryIndex++
 		}
 		return nil
-	}); err != nil {
-		return fmt.Errorf("error during database transaction: %w", err)
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case finishedTrees <- tree:
-	}
-	return nil
+	})
 }
 
 func (srv *Server) downloadSTH() (*signedTreeHead, error) {
