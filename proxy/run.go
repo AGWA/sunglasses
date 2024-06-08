@@ -65,11 +65,11 @@ func (srv *Server) tick() error {
 		return nil
 	}
 
-	log.Printf("position = %d, latest STH = %d", position.Size(), sth.TreeSize)
-
 	if !(sth.TreeSize > position.Size()) {
 		return nil
 	}
+
+	log.Printf("New STH with tree size %d; indexing entries from %d...", sth.TreeSize, position.Size())
 
 	firstTile := position.Size() / entriesPerTile
 	firstTileSkip := position.Size() % entriesPerTile
@@ -93,7 +93,6 @@ func (srv *Server) tick() error {
 				return ctx.Err()
 			case job = <-finishedJobs:
 			}
-			//log.Printf("finished downloading tile %d", job.tile)
 			if err := srv.indexLeaves(job.tile*entriesPerTile+job.skip, job.hashes); err != nil {
 				return fmt.Errorf("error indexing leaves: %w", err)
 			}
@@ -119,7 +118,7 @@ func (srv *Server) tick() error {
 				} else if err := srv.store(stateBucket, positionKey, positionBytes); err != nil {
 					return fmt.Errorf("error storing position in database: %w", err)
 				}
-				log.Printf("position is now %d, number of pending trees = %d", position.Size(), len(pending))
+				log.Printf("Indexed all entries up to tree size %d", position.Size())
 			}
 		}
 		if len(pending) != 0 {
@@ -136,7 +135,7 @@ func (srv *Server) tick() error {
 		}
 		srv.sth.Store(sth)
 
-		log.Printf("updated STH to %d", sth.TreeSize)
+		log.Printf("Updated STH to tree size %d", sth.TreeSize)
 		return nil
 	})
 	group.Go(func() error {
@@ -164,8 +163,6 @@ func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job 
 	defer cancel()
 
 	numHashes := min(entriesPerTile, sth.TreeSize-job.tile*entriesPerTile)
-
-	//log.Printf("downloading leaf tile %d, expecting %d hashes, of which %d will be skipped...", tile, numHashes, skip)
 
 	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "0", job.tile)
 	if err != nil {
