@@ -140,7 +140,7 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 			data = rest
 		}
 		for _, issuer := range entries[i].chain {
-			if _, exists := issuers[issuer]; exists {
+			if _, exists := issuers[issuer]; !exists {
 				issuers[issuer] = new([]byte)
 			}
 		}
