@@ -54,6 +54,8 @@ func main() {
 		log.Fatal("At least one -listen flag required")
 	}
 
+	log.SetPrefix(flags.monitoring.String() + " ")
+
 	server, err := proxy.NewServer(flags.db, flags.submission, flags.monitoring)
 	if err != nil {
 		log.Fatal(err)
