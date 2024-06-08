@@ -24,7 +24,7 @@ func download(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("error reading response from %s: %w", url, err)
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("error from %s: %s", url, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("%s from %s: %s", resp.Status, url, strings.TrimSpace(string(body)))
 	}
 	return body, nil
 }

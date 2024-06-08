@@ -14,11 +14,26 @@ import (
 	"time"
 )
 
+type logContactError struct {
+	error
+}
+
+func (e logContactError) Unwrap() error {
+	return e.error
+}
+
+func isLogContactError(e error) bool {
+	_, ok := e.(logContactError)
+	return ok
+}
+
 func (srv *Server) Run() error {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for {
-		if err := srv.tick(); err != nil {
+		if err := srv.tick(); isLogContactError(err) {
+			log.Printf("error contacting log (will try again later): %s", err)
+		} else if err != nil {
 			return err
 		}
 		<-ticker.C
@@ -61,8 +76,7 @@ func (srv *Server) tick() error {
 
 	sth, err := srv.downloadSTH()
 	if err != nil {
-		log.Printf("error downloading checkpoint (will try again later): %s", err)
-		return nil
+		return logContactError{fmt.Errorf("error downloading latest checkpoint: %w", err)}
 	}
 
 	if !(sth.TreeSize > position.Size()) {
@@ -166,10 +180,10 @@ func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job 
 
 	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "0", job.tile)
 	if err != nil {
-		return err
+		return logContactError{fmt.Errorf("error downloading leaf tile %d: %w", job.tile, err)}
 	}
 	if minLen := numHashes * merkleHashLen; uint64(len(data)) < minLen {
-		return fmt.Errorf("server returned %d bytes for tile %d, but we were expecting at least %d", len(data), job.tile, minLen)
+		return logContactError{fmt.Errorf("server returned %d bytes for tile %d, but we were expecting at least %d", len(data), job.tile, minLen)}
 	}
 
 	data = data[job.skip*merkleHashLen:]
