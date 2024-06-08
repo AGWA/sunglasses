@@ -65,7 +65,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  30 * time.Second,
-		Handler:      server,
+		Handler:      http.MaxBytesHandler(server, 128*1024),
 	}
 
 	listeners, err := listener.OpenAll(flags.listen)
