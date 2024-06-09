@@ -173,7 +173,7 @@ func (srv *Server) tick() error {
 }
 
 func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job *downloadLeavesJob, finishedJobs chan<- *downloadLeavesJob) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	numHashes := min(entriesPerTile, sth.TreeSize-job.tile*entriesPerTile)
