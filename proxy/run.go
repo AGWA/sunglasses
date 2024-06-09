@@ -136,7 +136,7 @@ func (srv *Server) tick() error {
 			}
 		}
 		if len(pending) != 0 {
-			panic(fmt.Errorf("%d tress still pending after download", len(pending)))
+			panic(fmt.Errorf("%d trees still pending after download", len(pending)))
 		}
 		rootHash := position.CalculateRoot()
 		if rootHash != merkletree.Hash(sth.SHA256RootHash) {
