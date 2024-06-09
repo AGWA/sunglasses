@@ -50,9 +50,6 @@ func main() {
 	if flags.monitoring == nil {
 		log.Fatal("-monitoring flag required")
 	}
-	if len(flags.listen) == 0 {
-		log.Fatal("At least one -listen flag required")
-	}
 
 	log.SetPrefix(flags.monitoring.String() + " ")
 
