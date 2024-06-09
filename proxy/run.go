@@ -160,7 +160,7 @@ func (srv *Server) tick() error {
 		}
 		return srv.downloadLeaves(ctx, sth, job, finishedJobs)
 	})
-	for tile := firstTile + 1; tile < endTile; tile++ {
+	for tile := firstTile + 1; ctx.Err() == nil && tile < endTile; tile++ {
 		group.Go(func() error {
 			job := &downloadLeavesJob{
 				tile: tile,
