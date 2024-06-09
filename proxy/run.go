@@ -173,7 +173,7 @@ func (srv *Server) tick() error {
 }
 
 func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job *downloadLeavesJob, finishedJobs chan<- *downloadLeavesJob) error {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	numHashes := min(entriesPerTile, sth.TreeSize-job.tile*entriesPerTile)
@@ -222,7 +222,7 @@ func (srv *Server) indexLeaves(entryIndex uint64, hashes [][]byte) error {
 }
 
 func (srv *Server) downloadSTH() (*signedTreeHead, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	checkpointURL := srv.monitoringPrefix.JoinPath("checkpoint")
