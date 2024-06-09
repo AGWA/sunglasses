@@ -196,7 +196,7 @@ func (srv *Server) downloadLeaves(ctx context.Context, sth *signedTreeHead, job 
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return logContactError{ctx.Err()}
 	case finishedJobs <- job:
 	}
 	return nil
