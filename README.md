@@ -1,6 +1,6 @@
-# Sunglasses - RFC6962 compatibility proxy for Sunlight logs
+# Sunglasses - RFC 6962 compatibility proxy for Sunlight logs
 
-Sunglasses is a proxy server that presents an RFC6962-compatible view of a Sunlight log.
+Sunglasses is a proxy server that presents an RFC 6962-compatible view of a Sunlight log.
 
 ## Operation
 
@@ -8,7 +8,7 @@ The submission endpoints (`add-chain`, `add-pre-chain`, and `get-roots`) are pro
 
 `get-entries` is converted to a single data tile fetch, and the response is translated to RFC 6962 syntax.  To build the response, issuer certificates are retrieved from the log as needed and cached.
 
-`get-sth` returns the latest checkpoint retrieved from the log, translated to an RFC6962 STH.
+`get-sth` returns the latest checkpoint retrieved from the log, translated to an RFC 6962 STH.
 
 `get-sth-consistency` and `get-entry-and-proof` fetch the necessary tiles from the log to build a proof.
 
@@ -20,7 +20,7 @@ Note that `get-sth` only returns trees which have been fully indexed, and `get-e
 
 ## Current Status
 
-All RFC6962 endpoints are implemented, except that no certificate chain is returned in `extra_data`.  This will be fixed once the new version of the Sunlight protocol is deployed.
+All RFC 6962 endpoints are implemented, except that no certificate chain is returned in `extra_data`.  This will be fixed once the new version of the Sunlight protocol is deployed.
 
 Leaf indexing needs performance tuning so that standing up a proxy for a large existing log is faster.
 
@@ -58,7 +58,7 @@ URL prefix of the log's submission endpoint.
 
 ## Example Usage
 
-The following command will launch an RFC6962-compatible log at `https://rome-2024h1.sunglasses.example.com` which proxies requests to the Rome 2024h1 Sunlight log.
+The following command will launch an RFC 6962-compatible log at `https://rome-2024h1.sunglasses.example.com` which proxies requests to the Rome 2024h1 Sunlight log.
 
 ```
 sunglasses -db /srv/sunglasses/rome-2024h1.db -listen tls:rome-2024h1.sunglasses.example.com:tcp:443 -monitoring https://rome2024h1.fly.storage.tigris.dev/ -submission https://rome.ct.filippo.io/2024h1/
