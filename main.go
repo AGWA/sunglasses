@@ -32,7 +32,7 @@ func main() {
 		db         string
 		listen     []string
 	}
-	flag.StringVar(&flags.db, "db", "", "`PATH` to database file")
+	flag.StringVar(&flags.db, "db", "", "`PATH` to database file (will be created if necessary)")
 	flag.Func("submission", "Submission prefix `URL`", parseURLFunc(&flags.submission))
 	flag.Func("monitoring", "Monitoring prefix `URL`", parseURLFunc(&flags.monitoring))
 	flag.Func("listen", "`SOCKET` to listen on, in go-listener syntax (repeatable)", func(arg string) error {
