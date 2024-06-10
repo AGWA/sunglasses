@@ -83,6 +83,18 @@ func (srv *Server) tick() error {
 		return nil
 	}
 
+	if srv.disableLeafIndex {
+		if sthBytes, err := json.Marshal(sth); err != nil {
+			return fmt.Errorf("error marshaling STH: %w", err)
+		} else if err := srv.store(stateBucket, sthKey, sthBytes); err != nil {
+			return fmt.Errorf("error storing STH in database: %w", err)
+		}
+		srv.sth.Store(sth)
+
+		log.Printf("Updated STH to tree size %d without indexing", sth.TreeSize)
+		return nil
+	}
+
 	log.Printf("New STH with tree size %d; indexing entries from %d...", sth.TreeSize, position.Size())
 
 	firstTile := position.Size() / entriesPerTile

@@ -34,6 +34,7 @@ type Server struct {
 	monitoringPrefix *url.URL
 	mux              *http.ServeMux
 	sth              atomic.Pointer[signedTreeHead]
+	disableLeafIndex bool
 }
 
 type Config struct {
@@ -41,6 +42,7 @@ type Config struct {
 	SubmissionPrefix *url.URL
 	MonitoringPrefix *url.URL
 	UnsafeNoFsync    bool
+	DisableLeafIndex bool
 }
 
 func NewServer(config *Config) (*Server, error) {
@@ -67,6 +69,7 @@ func NewServer(config *Config) (*Server, error) {
 	server := &Server{
 		monitoringPrefix: config.MonitoringPrefix,
 		mux:              http.NewServeMux(),
+		disableLeafIndex: config.DisableLeafIndex,
 	}
 	if sthBytes != nil {
 		sth := new(signedTreeHead)

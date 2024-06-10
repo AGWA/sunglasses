@@ -32,6 +32,7 @@ func main() {
 		db            string
 		listen        []string
 		unsafeNoFsync bool
+		noLeafIndex   bool
 	}
 	flag.StringVar(&flags.db, "db", "", "`PATH` to database file (will be created if necessary)")
 	flag.Func("submission", "Submission prefix `URL`", parseURLFunc(&flags.submission))
@@ -41,6 +42,7 @@ func main() {
 		return nil
 	})
 	flag.BoolVar(&flags.unsafeNoFsync, "unsafe-nofsync", false, "disable database fsync (unsafe; only appropriate during initial indexing)")
+	flag.BoolVar(&flags.noLeafIndex, "no-leaf-index", false, "disable leaf indexing (get-proof-by-hash endpoint won't work)")
 	flag.Parse()
 
 	if flags.db == "" {
@@ -60,6 +62,7 @@ func main() {
 		SubmissionPrefix: flags.submission,
 		MonitoringPrefix: flags.monitoring,
 		UnsafeNoFsync:    flags.unsafeNoFsync,
+		DisableLeafIndex: flags.noLeafIndex,
 	})
 	if err != nil {
 		log.Fatal(err)
