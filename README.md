@@ -56,6 +56,14 @@ URL prefix of the log's monitoring endpoint.
 
 URL prefix of the log's submission endpoint.
 
+### `-no-leaf-index`
+
+Disable leaf indexing.  This considerably reduces the size of the database and allows you to stand up a proxy without waiting for the log to be indexed, but it means that the `get-proof-by-hash` endpoint won't work.
+
+### `-unsafe-nofsync`
+
+Dangerously disable fsync when writing to the database.  This is useful for speeding up the initial indexing, but if your system shuts down uncleanly you may experience database corruption, requiring you to reindex the log from scratch.  You should not use this flag once initial indexing is complete and the proxy is running in production.
+
 ## Example Usage
 
 The following command will launch an RFC 6962-compatible log at `https://rome-2024h1.sunglasses.example.com` which proxies requests to the Rome 2024h1 Sunlight log.
