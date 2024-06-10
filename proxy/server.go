@@ -36,8 +36,15 @@ type Server struct {
 	sth              atomic.Pointer[signedTreeHead]
 }
 
-func NewServer(dbpath string, submissionPrefix, monitoringPrefix *url.URL) (*Server, error) {
-	db, err := bolt.Open(dbpath, 0666, &bolt.Options{Timeout: 30 * time.Second})
+type Config struct {
+	DBPath           string
+	SubmissionPrefix *url.URL
+	MonitoringPrefix *url.URL
+	UnsafeNoFsync    bool
+}
+
+func NewServer(config *Config) (*Server, error) {
+	db, err := bolt.Open(config.DBPath, 0666, &bolt.Options{Timeout: 30 * time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
 	}
@@ -46,6 +53,7 @@ func NewServer(dbpath string, submissionPrefix, monitoringPrefix *url.URL) (*Ser
 			db.Close()
 		}
 	}()
+	db.NoSync = config.UnsafeNoFsync
 	var sthBytes []byte
 	if err := db.Update(func(tx *bolt.Tx) error {
 		state, _ := tx.CreateBucketIfNotExists(stateBucket)
@@ -57,7 +65,7 @@ func NewServer(dbpath string, submissionPrefix, monitoringPrefix *url.URL) (*Ser
 		return nil, fmt.Errorf("error preparing database: %w", err)
 	}
 	server := &Server{
-		monitoringPrefix: monitoringPrefix,
+		monitoringPrefix: config.MonitoringPrefix,
 		mux:              http.NewServeMux(),
 	}
 	if sthBytes != nil {
@@ -69,7 +77,7 @@ func NewServer(dbpath string, submissionPrefix, monitoringPrefix *url.URL) (*Ser
 	}
 	submissionProxy := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
-			r.SetURL(submissionPrefix)
+			r.SetURL(config.SubmissionPrefix)
 		},
 	}
 	server.mux.Handle("POST /ct/v1/add-chain", submissionProxy)

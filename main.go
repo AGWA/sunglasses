@@ -27,10 +27,11 @@ func parseURLFunc(out **url.URL) func(string) error {
 
 func main() {
 	var flags struct {
-		submission *url.URL
-		monitoring *url.URL
-		db         string
-		listen     []string
+		submission    *url.URL
+		monitoring    *url.URL
+		db            string
+		listen        []string
+		unsafeNoFsync bool
 	}
 	flag.StringVar(&flags.db, "db", "", "`PATH` to database file (will be created if necessary)")
 	flag.Func("submission", "Submission prefix `URL`", parseURLFunc(&flags.submission))
@@ -39,6 +40,7 @@ func main() {
 		flags.listen = append(flags.listen, arg)
 		return nil
 	})
+	flag.BoolVar(&flags.unsafeNoFsync, "unsafe-nofsync", false, "disable database fsync (unsafe; only appropriate during initial indexing)")
 	flag.Parse()
 
 	if flags.db == "" {
@@ -53,7 +55,12 @@ func main() {
 
 	log.SetPrefix(flags.monitoring.String() + " ")
 
-	server, err := proxy.NewServer(flags.db, flags.submission, flags.monitoring)
+	server, err := proxy.NewServer(&proxy.Config{
+		DBPath:           flags.db,
+		SubmissionPrefix: flags.submission,
+		MonitoringPrefix: flags.monitoring,
+		UnsafeNoFsync:    flags.unsafeNoFsync,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
