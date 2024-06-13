@@ -14,5 +14,7 @@ golang.org/x/text v0.13.0 h1:ablQoSUd0tRdKxZewP80B+BaqeKJuVhuRxj/dkrun3k=
 golang.org/x/text v0.13.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
 software.sslmate.com/src/certspotter v0.0.0-20240609151316-759631f7e6d7 h1:mGLFk5xkk/vTYk3I1pe5NAfxQb9MzfqPedHDLlSnz1o=
 software.sslmate.com/src/certspotter v0.0.0-20240609151316-759631f7e6d7/go.mod h1:DzYjQhh0FzHjre7qCgEWcZ/Qm6UioKZyWVlUjxZzStg=
+software.sslmate.com/src/certspotter v0.0.0-20240613132417-e570923ef2f1 h1:WmfA6qTaIuDuUpbfzmf89c6CaQwrJ6+BIRyVBZglfV0=
+software.sslmate.com/src/certspotter v0.0.0-20240613132417-e570923ef2f1/go.mod h1:DzYjQhh0FzHjre7qCgEWcZ/Qm6UioKZyWVlUjxZzStg=
 src.agwa.name/go-listener v0.6.0 h1:z8KSkFe9uOCBDcYYWshe/bTYCU7TQLnqf+XRz+Yiwc8=
 src.agwa.name/go-listener v0.6.0/go.mod h1:vM7zjlskRnSbxbS8QTWYQIOfuKsn8SdJQH28RtouDTI=
