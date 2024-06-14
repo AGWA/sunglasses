@@ -99,7 +99,7 @@ func NewServer(config *Config) (*Server, error) {
 }
 
 func (srv *Server) store(bucket []byte, key []byte, value []byte) (err error) {
-	err = srv.db.Update(func(tx *bolt.Tx) error {
+	err = srv.db.Batch(func(tx *bolt.Tx) error {
 		return tx.Bucket(bucket).Put(key, value)
 	})
 	return
