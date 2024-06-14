@@ -74,9 +74,10 @@ func (srv *Server) tick() error {
 
 	log.Printf("Downloaded STH with tree size %d", sth.TreeSize)
 
-	results := make(chan leafHashes)
+	const workers = 500
+	results := make(chan leafHashes, workers)
 	group, ctx := errgroup.WithContext(context.Background())
-	group.SetLimit(500)
+	group.SetLimit(1 + workers)
 	group.Go(func() error {
 		tx, err := srv.db.Begin(true)
 		if err != nil {
