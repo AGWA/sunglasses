@@ -23,7 +23,7 @@ func (reader *tileReader) ReadTiles(tiles []tlog.Tile) ([][]byte, error) {
 	for i := range tiles {
 		group.Go(func() error {
 			tileURL := reader.prefix.JoinPath(tiles[i].Path())
-			if resp, err := download(ctx, tileURL.String()); err != nil {
+			if resp, err := downloadRetry(ctx, tileURL.String()); err != nil {
 				return err
 			} else {
 				tileData[i] = resp

@@ -190,7 +190,7 @@ func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte,
 		return data, nil
 	}
 	issuerURL := srv.monitoringPrefix.JoinPath("issuer", hex.EncodeToString(fingerprint[:]))
-	data, err = download(ctx, issuerURL.String())
+	data, err = downloadRetry(ctx, issuerURL.String())
 	if err != nil {
 		return nil, err
 	}
