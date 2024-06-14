@@ -78,15 +78,36 @@ func (srv *Server) tick() error {
 	group, ctx := errgroup.WithContext(context.Background())
 	group.SetLimit(500)
 	group.Go(func() error {
+		tx, err := srv.db.Begin(true)
+		if err != nil {
+			return fmt.Errorf("error starting database transaction: %w", err)
+		}
+		defer func() { tx.Rollback() }()
+		uncommitted := 0
 		for ctx.Err() == nil && !position.IsComplete(sth.TreeSize) {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case hashes := <-results:
-				if err := srv.processLeafHashes(&position, hashes); err != nil {
+				if err := srv.processLeafHashes(tx, &position, hashes); err != nil {
 					return fmt.Errorf("error processing leaf hashes at %d: %w", hashes.startIndex, err)
 				}
+				uncommitted++
+				if uncommitted == 100 {
+					if err := commit(tx, position); err != nil {
+						return err
+					}
+					if newTx, err := srv.db.Begin(true); err != nil {
+						return fmt.Errorf("error starting database transaction: %w", err)
+					} else {
+						tx = newTx
+					}
+					uncommitted = 0
+				}
 			}
+		}
+		if err := commit(tx, position); err != nil {
+			return err
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -155,32 +176,28 @@ func (srv *Server) downloadLeafHashes(ctx context.Context, sth *signedTreeHead, 
 	}
 }
 
-func (srv *Server) processLeafHashes(position *merkletree.FragmentedCollapsedTree, hashes leafHashes) error {
-	return srv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(leafBucket)
+func (srv *Server) processLeafHashes(tx *bolt.Tx, position *merkletree.FragmentedCollapsedTree, hashes leafHashes) error {
+	//start := time.Now()
+	//defer func() { log.Printf("processed leaf hashes from %d in %s", hashes.startIndex, time.Since(start)) }()
 
-		entryIndex := hashes.startIndex
-		for _, hash := range hashes.hashes {
-			if err := position.AddHash(entryIndex, merkletree.Hash(hash)); err != nil {
-				panic(err)
-			}
-			var entryIndexBytes [8]byte
-			binary.BigEndian.PutUint64(entryIndexBytes[:], entryIndex)
-			currentEntryIndexBytes := bucket.Get(hash)
-			if currentEntryIndexBytes == nil || bytes.Compare(entryIndexBytes[:], currentEntryIndexBytes) < 0 {
-				if err := bucket.Put(hash, entryIndexBytes[:]); err != nil {
-					return err
-				}
-			}
-			entryIndex++
+	bucket := tx.Bucket(leafBucket)
+
+	entryIndex := hashes.startIndex
+	for _, hash := range hashes.hashes {
+		if err := position.AddHash(entryIndex, merkletree.Hash(hash)); err != nil {
+			panic(err)
 		}
-		if positionBytes, err := json.Marshal(position); err != nil {
-			return fmt.Errorf("error marshaling position: %w", err)
-		} else if err := tx.Bucket(stateBucket).Put(positionKey, positionBytes); err != nil {
-			return fmt.Errorf("error storing position in database: %w", err)
+		var entryIndexBytes [8]byte
+		binary.BigEndian.PutUint64(entryIndexBytes[:], entryIndex)
+		currentEntryIndexBytes := bucket.Get(hash)
+		if currentEntryIndexBytes == nil || bytes.Compare(entryIndexBytes[:], currentEntryIndexBytes) < 0 {
+			if err := bucket.Put(hash, entryIndexBytes[:]); err != nil {
+				return err
+			}
 		}
-		return nil
-	})
+		entryIndex++
+	}
+	return nil
 }
 
 func (srv *Server) downloadSTH() (*signedTreeHead, error) {
@@ -198,4 +215,19 @@ func (srv *Server) downloadSTH() (*signedTreeHead, error) {
 		return nil, fmt.Errorf("error parsing checkpoint: %w", err)
 	}
 	return sth, nil
+}
+
+func commit(tx *bolt.Tx, position merkletree.FragmentedCollapsedTree) error {
+	//log.Printf("committing...")
+	//start := time.Now()
+	if positionBytes, err := json.Marshal(position); err != nil {
+		return fmt.Errorf("error marshaling position: %w", err)
+	} else if err := tx.Bucket(stateBucket).Put(positionKey, positionBytes); err != nil {
+		return fmt.Errorf("error storing position in database: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+	//log.Printf("committed transaction in %s", time.Since(start))
+	return nil
 }
