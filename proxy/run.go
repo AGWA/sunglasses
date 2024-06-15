@@ -126,6 +126,8 @@ func (srv *Server) tick() error {
 		log.Printf("All entries indexed, updated STH to tree size %d", sth.TreeSize)
 		return nil
 	})
+	startTime := time.Now()
+	var numEntries uint64
 	//for begin, end := range position.Gaps {
 	position.Gaps(func(begin, end uint64) bool {
 		if ctx.Err() != nil {
@@ -135,6 +137,7 @@ func (srv *Server) tick() error {
 		if end == 0 {
 			end = sth.TreeSize
 		}
+		numEntries += end - begin
 		log.Printf("Indexing entries in range [%d, %d)...", begin, end)
 		for ctx.Err() == nil && begin < end {
 			tile := begin / entriesPerTile
@@ -149,7 +152,12 @@ func (srv *Server) tick() error {
 		return true
 	})
 
-	return group.Wait()
+	if err := group.Wait(); err != nil {
+		return err
+	}
+	timeElapsed := time.Since(startTime)
+	log.Printf("Indexed %d entries in %s (%f entries per second)", numEntries, timeElapsed, float64(numEntries)/timeElapsed.Seconds())
+	return nil
 }
 
 func (srv *Server) downloadLeafHashes(ctx context.Context, sth *signedTreeHead, tile uint64, skip uint64, count uint64, results chan<- leafHashes) error {
