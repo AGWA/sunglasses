@@ -94,7 +94,7 @@ func (srv *Server) tick() error {
 					return fmt.Errorf("error processing leaf hashes at %d: %w", hashes.startIndex, err)
 				}
 				uncommitted++
-				if uncommitted == 100 {
+				if uncommitted == 10 {
 					if err := commit(tx, position); err != nil {
 						return err
 					}
