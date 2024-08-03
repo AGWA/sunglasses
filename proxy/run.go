@@ -1,8 +1,8 @@
 package proxy
 
 import (
-	"database/sql"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"golang.org/x/sync/errgroup"

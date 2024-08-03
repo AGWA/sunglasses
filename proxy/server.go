@@ -5,14 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/mod/sumdb/tlog"
-	"src.agwa.name/go-dbutil/dbschema"
-	"src.agwa.name/sunglasses/proxy/schema"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"src.agwa.name/go-dbutil/dbschema"
+	"src.agwa.name/sunglasses/proxy/schema"
 	"sync/atomic"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 const tileHeight = 8
