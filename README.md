@@ -28,9 +28,7 @@ Leaf indexing needs performance tuning so that standing up a proxy for a large e
 
 These are for testing purposes only and should not be used in production.
 
-* Rome 2024h1: `https://rome-2024h1.sunglasses.sslmate.net/`
-* Sycamore 2024h2: `https://sycamore-2024h2.sunglasses.sslmate.net/`
-* Twig 2025h1: `https://twig-2025h1.sunglasses.sslmate.net/`
+* Itko 2025: `https://itko-2025.sunglasses.sslmate.net/`
 
 ## Installation
 
