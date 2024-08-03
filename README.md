@@ -14,7 +14,7 @@ The submission endpoints (`add-chain`, `add-pre-chain`, and `get-roots`) are pro
 
 `get-proof-by-hash` is the most complicated endpoint to implement, since it requires determining the position of the leaf specified by the client.  Sunglasses continuously downloads leaf tiles from the log to build an index from leaf hash to leaf position.  `get-proof-by-hash` looks up the hash in the index, and then fetches the necessary tiles from the log to build a proof.
 
-The leaf index, issuer cache, and latest STH are stored in a BoltDB database.
+The leaf index, issuer cache, and latest STH are stored in a SQLite database.
 
 Note that `get-sth` only returns trees which have been fully indexed, and `get-entries` only returns entries within the tree returned by `get-sth`.  Consequentially, standing up a proxy for a large log takes a long time because all existing leaves have to be downloaded and indexed before the proxy is usable.  Once all leaves have been indexed, Sunglasses should have no problem keeping up with the growth of the log.
 
