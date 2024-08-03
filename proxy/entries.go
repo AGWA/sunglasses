@@ -65,16 +65,10 @@ func (e *entry) parse(input []byte) ([]byte, error) {
 			return nil, fmt.Errorf("error reading precertificate")
 		}
 		e.precertificate = precertificate
-
-		// temporary: ignore PrecertificateSigningCertificate
-		if !str.ReadUint24LengthPrefixed(&skipped) {
-			return nil, fmt.Errorf("error reading PrecertificateSigningCertificate")
-		}
 	} else {
 		e.precertificate = nil
 	}
 
-	/* temporary
 	// certificate_chain
 	var chainBytes cryptobyte.String
 	if !str.ReadUint16LengthPrefixed(&chainBytes) {
@@ -88,7 +82,6 @@ func (e *entry) parse(input []byte) ([]byte, error) {
 		}
 		e.chain = append(e.chain, fingerprint)
 	}
-	*/
 
 	return str, nil
 }
