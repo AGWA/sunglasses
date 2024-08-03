@@ -1,6 +1,6 @@
-# Sunglasses - RFC 6962 compatibility proxy for Sunlight logs
+# Sunglasses - RFC 6962 compatibility proxy for static-ct-api logs
 
-Sunglasses is a proxy server that presents an RFC 6962-compatible view of a Sunlight log.
+Sunglasses is a proxy server that presents an RFC 6962-compatible view of a [static-ct-api](https://github.com/C2SP/C2SP/blob/main/static-ct-api.md) log.
 
 ## Operation
 
@@ -16,13 +16,7 @@ The submission endpoints (`add-chain`, `add-pre-chain`, and `get-roots`) are pro
 
 The leaf index, issuer cache, and latest STH are stored in a BoltDB database.
 
-Note that `get-sth` only returns trees which have been fully indexed, and `get-entries` only returns entries within the tree returned by `get-sth`.  Consequentially, standing up a proxy for a large Sunlight log takes a long time because all existing leaves have to be downloaded and indexed before the proxy is usable.  Once all leaves have been indexed, Sunglasses should have no problem keeping up with the growth of the log.
-
-## Current Status
-
-All RFC 6962 endpoints are implemented, except that no certificate chain is returned in `extra_data`.  This will be fixed once the new version of the Sunlight protocol is deployed.
-
-Leaf indexing needs performance tuning so that standing up a proxy for a large existing log is faster.
+Note that `get-sth` only returns trees which have been fully indexed, and `get-entries` only returns entries within the tree returned by `get-sth`.  Consequentially, standing up a proxy for a large log takes a long time because all existing leaves have to be downloaded and indexed before the proxy is usable.  Once all leaves have been indexed, Sunglasses should have no problem keeping up with the growth of the log.
 
 ## Public Instances
 
@@ -68,8 +62,8 @@ Dangerously disable fsync when writing to the database.  This is useful for spee
 
 ## Example Usage
 
-The following command will launch an RFC 6962-compatible log at `https://rome-2024h1.sunglasses.example.com` which proxies requests to the Rome 2024h1 Sunlight log.
+The following command will launch an RFC 6962-compatible log at `https://itko-2025.sunglasses.example.com` which proxies requests to the Itko 2025 log.
 
 ```
-sunglasses -db /srv/sunglasses/rome-2024h1.db -listen tls:rome-2024h1.sunglasses.example.com:tcp:443 -monitoring https://rome2024h1.fly.storage.tigris.dev/ -submission https://rome.ct.filippo.io/2024h1/
+sunglasses -id o6U+hSdTxD0uzfNlqqAKPwLqLggaBqzejSxyrPxX18E= -db /srv/sunglasses/itko-2025.db -listen tls:itko-2025.sunglasses.example.com:tcp:443 -monitoring https://ct2025.itko.dev -submission https://ct2025.itko.dev
 ```
