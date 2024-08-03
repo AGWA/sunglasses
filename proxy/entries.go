@@ -21,7 +21,16 @@ type entry struct {
 	chain            [][32]byte
 }
 
-func (e *entry) parse(input []byte) ([]byte, error) {
+func decodeUint40(buf [5]byte) (i uint64) {
+	i |= uint64(buf[0]) << 32
+	i |= uint64(buf[1]) << 24
+	i |= uint64(buf[2]) << 16
+	i |= uint64(buf[3]) << 8
+	i |= uint64(buf[4]) << 0
+	return
+}
+
+func (e *entry) parse(input []byte, leafIndex uint64) ([]byte, error) {
 	var skipped cryptobyte.String
 	str := cryptobyte.String(input)
 
@@ -51,8 +60,36 @@ func (e *entry) parse(input []byte) ([]byte, error) {
 	}
 
 	// TimestampedEntry.extensions
-	if !str.ReadUint16LengthPrefixed(&skipped) {
+	var extensions cryptobyte.String
+	if !str.ReadUint16LengthPrefixed(&extensions) {
 		return nil, fmt.Errorf("error reading extensions")
+	}
+	var hasIndexExtension bool
+	for !extensions.Empty() {
+		var extType uint8
+		var extData cryptobyte.String
+		if !extensions.ReadUint8(&extType) {
+			return nil, fmt.Errorf("error reading extension type")
+		}
+		if !extensions.ReadUint16LengthPrefixed(&extData) {
+			return nil, fmt.Errorf("error reading extension data")
+		}
+		if extType != 0 {
+			continue
+		}
+		if hasIndexExtension {
+			return nil, fmt.Errorf("duplicate LeafIndex extension")
+		}
+		if len(extData) != 5 {
+			return nil, fmt.Errorf("LeafIndex extension has wrong length")
+		}
+		if thisIndex := decodeUint40(([5]byte)(extData)); thisIndex != leafIndex {
+			return nil, fmt.Errorf("incorrect leaf index %d", thisIndex)
+		}
+		hasIndexExtension = true
+	}
+	if !hasIndexExtension {
+		return nil, fmt.Errorf("missing LeafIndex extension")
 	}
 
 	timestampedEntryLen := len(input) - len(str)
@@ -126,8 +163,9 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 	}
 	var skippedEntry entry
 	for i := range skip {
-		if rest, err := skippedEntry.parse(data); err != nil {
-			return nil, fmt.Errorf("error parsing entry %d: %w", tile*entriesPerTile+i, err)
+		leafIndex := tile*entriesPerTile + i
+		if rest, err := skippedEntry.parse(data, leafIndex); err != nil {
+			return nil, fmt.Errorf("error parsing entry %d: %w", leafIndex)
 		} else {
 			data = rest
 		}
@@ -135,8 +173,9 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 	issuers := make(map[[32]byte]*[]byte)
 	entries := make([]entry, numEntries)
 	for i := range numEntries {
-		if rest, err := entries[i].parse(data); err != nil {
-			return nil, fmt.Errorf("error parsing entry %d: %w", tile*entriesPerTile+skip+i, err)
+		leafIndex := tile*entriesPerTile + i
+		if rest, err := entries[i].parse(data, leafIndex); err != nil {
+			return nil, fmt.Errorf("error parsing entry %d: %w", leafIndex, err)
 		} else {
 			data = rest
 		}
