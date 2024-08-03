@@ -2,35 +2,25 @@ package proxy
 
 import (
 	"context"
-	"encoding/binary"
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/boltdb/bolt"
 	"golang.org/x/mod/sumdb/tlog"
+	"src.agwa.name/go-dbutil/dbschema"
+	"src.agwa.name/sunglasses/proxy/schema"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync/atomic"
-	"time"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const tileHeight = 8
 const entriesPerTile = 1 << tileHeight
 const merkleHashLen = 32
 
-var (
-	stateBucket  = []byte("state")
-	leafBucket   = []byte("leaf")
-	issuerBucket = []byte("issuer")
-)
-
-var (
-	sthKey      = []byte("sth")
-	positionKey = []byte("position")
-)
-
 type Server struct {
-	db               *bolt.DB
+	db               *sql.DB
 	monitoringPrefix *url.URL
 	mux              *http.ServeMux
 	sth              atomic.Pointer[signedTreeHead]
@@ -46,7 +36,7 @@ type Config struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	db, err := bolt.Open(config.DBPath, 0666, &bolt.Options{Timeout: 30 * time.Second})
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?_busy_timeout=5000&_foreign_keys=ON&_txlock=immediate&_journal_mode=WAL&_synchronous=FULL", url.PathEscape(config.DBPath)))
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
 	}
@@ -55,16 +45,13 @@ func NewServer(config *Config) (*Server, error) {
 			db.Close()
 		}
 	}()
-	db.NoSync = config.UnsafeNoFsync
+	if err := dbschema.Build(context.Background(), db, schema.Files); err != nil {
+		return nil, fmt.Errorf("error building database schema: %w", err)
+	}
+
 	var sthBytes []byte
-	if err := db.Update(func(tx *bolt.Tx) error {
-		state, _ := tx.CreateBucketIfNotExists(stateBucket)
-		sthBytes = state.Get(sthKey)
-		tx.CreateBucketIfNotExists(issuerBucket)
-		tx.CreateBucketIfNotExists(leafBucket)
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("error preparing database: %w", err)
+	if err := db.QueryRow(`SELECT sth FROM state`).Scan(&sthBytes); err != nil {
+		return nil, fmt.Errorf("error loading STH from database: %w", err)
 	}
 	server := &Server{
 		monitoringPrefix: config.MonitoringPrefix,
@@ -96,35 +83,6 @@ func NewServer(config *Config) (*Server, error) {
 	db = nil // prevent defer from closing db
 
 	return server, nil
-}
-
-func (srv *Server) store(bucket []byte, key []byte, value []byte) (err error) {
-	err = srv.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(bucket).Put(key, value)
-	})
-	return
-}
-
-func (srv *Server) load(bucket []byte, key []byte) (value []byte, err error) {
-	err = srv.db.View(func(tx *bolt.Tx) error {
-		value = tx.Bucket(bucket).Get(key)
-		return nil
-	})
-	return
-}
-
-func (srv *Server) loadUint64(bucket []byte, key []byte) (uint64, bool, error) {
-	valueBytes, err := srv.load(bucket, key)
-	if err != nil {
-		return 0, false, err
-	}
-	if valueBytes == nil {
-		return 0, false, nil
-	}
-	if len(valueBytes) != 8 {
-		return 0, false, fmt.Errorf("value has wrong length for uint64")
-	}
-	return binary.BigEndian.Uint64(valueBytes), true, nil
 }
 
 func (srv *Server) tileReader(ctx context.Context) tlog.TileReader {

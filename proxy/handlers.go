@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -96,13 +97,12 @@ func (srv *Server) getProofByHash(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "This log does not implement the get-proof-by-hash endpoint", http.StatusNotImplemented)
 		return
 	}
-	leafIndex, hashFound, err := srv.loadUint64(leafBucket, hash[:])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !hashFound {
+	var leafIndex uint64
+	if err := srv.db.QueryRowContext(req.Context(), `SELECT position FROM leaf WHERE hash = $1`, hash[:]).Scan(&leafIndex); err == sql.ErrNoRows {
 		http.Error(w, "hash not found", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if leafIndex >= treeSize {

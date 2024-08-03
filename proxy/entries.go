@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/crypto/cryptobyte"
@@ -182,22 +183,21 @@ func (srv *Server) getIssuers(ctx context.Context, issuers map[[32]byte]*[]byte)
 }
 
 func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte, error) {
-	data, err := srv.load(issuerBucket, fingerprint[:])
-	if err != nil {
+	var data []byte
+	if err := srv.db.QueryRowContext(ctx, `SELECT data FROM issuer WHERE sha256 = $1`, fingerprint[:]).Scan(&data); err == nil {
+		return data, nil
+	} else if err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error loading issuer from database: %w", err)
 	}
-	if data != nil {
-		return data, nil
-	}
 	issuerURL := srv.monitoringPrefix.JoinPath("issuer", hex.EncodeToString(fingerprint[:]))
-	data, err = downloadRetry(ctx, issuerURL.String())
+	data, err := downloadRetry(ctx, issuerURL.String())
 	if err != nil {
 		return nil, err
 	}
 	if sha256.Sum256(data) != fingerprint {
 		return nil, fmt.Errorf("response from %s does not match the fingerprint", issuerURL)
 	}
-	if err := srv.store(issuerBucket, fingerprint[:], data); err != nil {
+	if _, err := srv.db.ExecContext(ctx, `INSERT INTO issuer (sha256, data) ON CONFLICT (sha256) DO NOTHING`, fingerprint[:], data); err != nil {
 		return nil, fmt.Errorf("error storing issuer in databaes: %w", err)
 	}
 	return data, nil
