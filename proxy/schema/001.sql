@@ -1,0 +1,16 @@
+CREATE TABLE state (
+	sth		BLOB,
+	position	BLOB
+);
+INSERT INTO state DEFAULT VALUES;
+CREATE UNIQUE INDEX state_singleton ON state ((1));
+
+CREATE TABLE issuer (
+	sha256		BLOB NOT NULL PRIMARY KEY,
+	data		BLOB NOT NULL
+);
+
+CREATE TABLE leaf (
+	hash		BLOB NOT NULL PRIMARY KEY,
+	position	BIGINT NOT NULL
+) WITHOUT ROWID;
