@@ -126,7 +126,7 @@ func (srv *Server) tick() error {
 			return ctx.Err()
 		}
 		if rootHash := position.Subtree(0).CalculateRoot(); rootHash != merkletree.Hash(sth.SHA256RootHash) {
-			return fmt.Errorf("root hash computed from leaves (%x) doesn't match STH root hash (%x)", rootHash[:], sth.SHA256RootHash[:])
+			return fmt.Errorf("root hash computed from leaves (%x) doesn't match STH root hash (%x) for tree size %d", rootHash[:], sth.SHA256RootHash[:], sth.TreeSize)
 		}
 		if err := srv.storeSTH(sth); err != nil {
 			return err
