@@ -65,5 +65,5 @@ Dangerously disable fsync when writing to the database.  This is useful for spee
 The following command will launch an RFC 6962-compatible log at `https://itko-2025.sunglasses.example.com` which proxies requests to the Itko 2025 log.
 
 ```
-sunglasses -id o6U+hSdTxD0uzfNlqqAKPwLqLggaBqzejSxyrPxX18E= -db /srv/sunglasses/itko-2025.db -listen tls:itko-2025.sunglasses.example.com:tcp:443 -monitoring https://ct2025.itko.dev -submission https://ct2025.itko.dev
+sunglasses -id yLkilxtwEtRI1qd7fACK5qViNNxRkxAzwlUNQjiVeZo= -db /srv/sunglasses/itko-2025.db -listen tls:itko-2025.sunglasses.example.com:tcp:443 -monitoring https://ct2025.itko.dev -submission https://ct2025.itko.dev
 ```
