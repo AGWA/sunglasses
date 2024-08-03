@@ -217,7 +217,7 @@ func (srv *Server) downloadSTH() (*signedTreeHead, error) {
 		return nil, err
 	}
 
-	sth, err := parseCheckpoint(checkpointBytes)
+	sth, err := parseCheckpoint(checkpointBytes, srv.logID)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing checkpoint: %w", err)
 	}

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -25,29 +26,27 @@ func (sth *signedTreeHead) tlogTree() tlog.Tree {
 	}
 }
 
-func chompCheckpointLine(input []byte) (string, []byte) {
+func chompCheckpointLine(input []byte) (string, []byte, bool) {
 	newline := bytes.IndexByte(input, '\n')
 	if newline == -1 {
-		return "", nil
+		return "", nil, false
 	}
-	return string(input[:newline]), input[newline+1:]
+	return string(input[:newline]), input[newline+1:], true
 }
 
-func parseCheckpoint(input []byte) (*signedTreeHead, error) {
-	preamble, input := chompCheckpointLine(input)
-	sizeLine, input := chompCheckpointLine(input)
-	hashLine, input := chompCheckpointLine(input)
-	blankLine, input := chompCheckpointLine(input)
-	signatureLine, input := chompCheckpointLine(input)
+func parseCheckpoint(input []byte, logID LogID) (*signedTreeHead, error) {
+	// origin
+	origin, input, _ := chompCheckpointLine(input)
 
-	if len(input) != 0 {
-		return nil, fmt.Errorf("%d unexpected bytes at end of signed note", len(input))
-	}
-
+	// tree size
+	sizeLine, input, _ := chompCheckpointLine(input)
 	treeSize, err := strconv.ParseUint(sizeLine, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("malformed tree size: %w", err)
 	}
+
+	// root hash
+	hashLine, input, _ := chompCheckpointLine(input)
 	rootHash, err := base64.StdEncoding.DecodeString(hashLine)
 	if err != nil {
 		return nil, fmt.Errorf("malformed root hash: %w", err)
@@ -55,26 +54,59 @@ func parseCheckpoint(input []byte) (*signedTreeHead, error) {
 	if len(rootHash) != merkleHashLen {
 		return nil, fmt.Errorf("root hash has wrong length (should be %d bytes long, not %d)", merkleHashLen, len(rootHash))
 	}
-	if len(blankLine) != 0 {
-		return nil, errors.New("missing blank line in signed note")
+
+	// 0 or more non-empty extension lines (ignored)
+	for {
+		line, rest, ok := chompCheckpointLine(input)
+		if !ok {
+			return nil, errors.New("signed note ended prematurely")
+		}
+		input = rest
+		if len(line) == 0 {
+			break
+		}
 	}
-	signaturePrefix := "\u2014 " + preamble + " "
-	if !strings.HasPrefix(signatureLine, signaturePrefix) {
-		return nil, errors.New("signature line has unexpected prefix")
+
+	// signature lines
+	signaturePrefix := "\u2014 " + origin + " "
+	keyID := makeKeyID(origin, logID)
+	for {
+		signatureLine, rest, ok := chompCheckpointLine(input)
+		if !ok {
+			return nil, errors.New("signed note is missing signature from the log")
+		}
+		input = rest
+		if !strings.HasPrefix(signatureLine, signaturePrefix) {
+			continue
+		}
+		signatureBytes, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(signatureLine, signaturePrefix))
+		if err != nil {
+			return nil, fmt.Errorf("malformed signature: %w", err)
+		}
+		if !bytes.HasPrefix(signatureBytes, keyID[:]) {
+			continue
+		}
+		if len(signatureBytes) < 12 {
+			return nil, errors.New("malformed signature: too short")
+		}
+		timestamp := binary.BigEndian.Uint64(signatureBytes[4:12])
+		signature := signatureBytes[12:]
+		return &signedTreeHead{
+			TreeSize:          treeSize,
+			Timestamp:         timestamp,
+			SHA256RootHash:    rootHash,
+			TreeHeadSignature: signature,
+		}, nil
 	}
-	signatureBytes, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(signatureLine, signaturePrefix))
-	if err != nil {
-		return nil, fmt.Errorf("malformed signature: %w", err)
-	}
-	if len(signatureBytes) < 12 {
-		return nil, fmt.Errorf("malformed signature: too short", err)
-	}
-	timestamp := binary.BigEndian.Uint64(signatureBytes[4:12])
-	signature := signatureBytes[12:]
-	return &signedTreeHead{
-		TreeSize:          treeSize,
-		Timestamp:         timestamp,
-		SHA256RootHash:    rootHash,
-		TreeHeadSignature: signature,
-	}, nil
+}
+
+func makeKeyID(origin string, logID LogID) [4]byte {
+	h := sha256.New()
+	h.Write([]byte(origin))
+	h.Write([]byte{'\n', 0x05})
+	h.Write(logID[:])
+
+	var digest [sha256.Size]byte
+	h.Sum(digest[:0])
+	return [4]byte(digest[:4])
 }

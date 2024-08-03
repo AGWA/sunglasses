@@ -44,6 +44,10 @@ go install src.agwa.name/sunglasses@latest
 
 Path to database file, which will be created if necessary.
 
+### `-id BASE64` (Mandatory)
+
+Log ID, in base64.
+
 ### `-listen SOCKET`
 
 Listen on the given address, provided in [go-listener syntax](https://pkg.go.dev/src.agwa.name/go-listener#readme-listener-syntax).  You can specify the `-listen` flag multiple times to listen on multiple addresses.

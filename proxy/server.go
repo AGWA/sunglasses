@@ -19,7 +19,10 @@ const tileHeight = 8
 const entriesPerTile = 1 << tileHeight
 const merkleHashLen = 32
 
+type LogID [32]byte
+
 type Server struct {
+	logID            LogID
 	db               *sql.DB
 	monitoringPrefix *url.URL
 	mux              *http.ServeMux
@@ -28,6 +31,7 @@ type Server struct {
 }
 
 type Config struct {
+	LogID            LogID
 	DBPath           string
 	SubmissionPrefix *url.URL
 	MonitoringPrefix *url.URL
@@ -54,6 +58,7 @@ func NewServer(config *Config) (*Server, error) {
 		return nil, fmt.Errorf("error loading STH from database: %w", err)
 	}
 	server := &Server{
+		logID:            config.LogID,
 		monitoringPrefix: config.MonitoringPrefix,
 		mux:              http.NewServeMux(),
 		disableLeafIndex: config.DisableLeafIndex,
