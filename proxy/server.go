@@ -40,7 +40,17 @@ type Config struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?_busy_timeout=5000&_foreign_keys=ON&_txlock=immediate&_journal_mode=WAL&_synchronous=FULL", url.PathEscape(config.DBPath)))
+	// Use NORMAL instead of FULL for better write performance (30%
+	// improvement in throughput per one source). We may lose recent commits if
+	// there's a power loss, but we can easily recreate the data the next time
+	// Sunglasses runs. The database will not be corrupted.
+	synchronous := "NORMAL"
+	if config.UnsafeNoFsync {
+		// Database can be corrupted if there's a power failure, but commits
+		// can be "orders of magnitude" faster.
+		synchronous = "OFF"
+	}
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?_busy_timeout=5000&_foreign_keys=ON&_txlock=immediate&_journal_mode=WAL&_synchronous=%s", url.PathEscape(config.DBPath), url.PathEscape(synchronous)))
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
 	}
