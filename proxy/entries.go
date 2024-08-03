@@ -190,7 +190,7 @@ func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte,
 	if sha256.Sum256(data) != fingerprint {
 		return nil, fmt.Errorf("response from %s does not match the fingerprint", issuerURL)
 	}
-	if _, err := srv.db.ExecContext(ctx, `INSERT INTO issuer (sha256, data) ON CONFLICT (sha256) DO NOTHING`, fingerprint[:], data); err != nil {
+	if _, err := srv.db.ExecContext(ctx, `INSERT INTO issuer (sha256, data) VALUES ($1, $2) ON CONFLICT (sha256) DO NOTHING`, fingerprint[:], data); err != nil {
 		return nil, fmt.Errorf("error storing issuer in databaes: %w", err)
 	}
 	return data, nil
