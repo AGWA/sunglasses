@@ -105,8 +105,7 @@ func downloadTile(ctx context.Context, sth *signedTreeHead, prefix *url.URL, lev
 }
 
 func formatTilePath(level string, tile uint64, partial uint64) string {
-	//path := "tile/" + level + "/" + formatTileIndex(tile)
-	path := "tile/8/" + level + "/" + formatTileIndex(tile)
+	path := "tile/" + level + "/" + formatTileIndex(tile)
 	if partial != 0 {
 		path += fmt.Sprintf(".p/%d", partial)
 	}
