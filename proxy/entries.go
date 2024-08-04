@@ -173,7 +173,7 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 	issuers := make(map[[32]byte]*[]byte)
 	entries := make([]entry, numEntries)
 	for i := range numEntries {
-		leafIndex := tile*entriesPerTile + i
+		leafIndex := tile*entriesPerTile + skip + i
 		if rest, err := entries[i].parse(data, leafIndex); err != nil {
 			return nil, fmt.Errorf("error parsing entry %d: %w", leafIndex, err)
 		} else {
