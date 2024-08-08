@@ -23,6 +23,9 @@ Note that `get-sth` only returns trees which have been fully indexed, and `get-e
 These are for testing purposes only and should not be used in production.
 
 * Itko 2025: `https://itko-2025.sunglasses.sslmate.net/`
+* Rome 2024h2: `https://rome-2024h2.sunglasses.sslmate.net/`
+* Rome 2025h1: `https://rome-2025h1.sunglasses.sslmate.net/`
+* Rome 2025h2: `https://rome-2025h2.sunglasses.sslmate.net/`
 
 ## Installation
 
