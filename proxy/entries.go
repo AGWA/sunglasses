@@ -165,7 +165,7 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 	for i := range skip {
 		leafIndex := tile*entriesPerTile + i
 		if rest, err := skippedEntry.parse(data, leafIndex); err != nil {
-			return nil, fmt.Errorf("error parsing entry %d: %w", leafIndex)
+			return nil, fmt.Errorf("error parsing entry %d: %w", leafIndex, err)
 		} else {
 			data = rest
 		}
