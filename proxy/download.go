@@ -95,19 +95,19 @@ func downloadTile(ctx context.Context, sth *signedTreeHead, prefix *url.URL, lev
 	if partial := sth.TreeSize - tile*entriesPerTile; partial < entriesPerTile {
 		if data, err1 := downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, partial)).String()); err1 == nil {
 			return data, nil
-		} else if data, err2 := downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, 0)).String()); err2 == nil {
+		} else if data, err2 := downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String()); err2 == nil {
 			return data, nil
 		} else {
 			return nil, err1
 		}
 	}
-	return downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, 0)).String())
+	return downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String())
 }
 
-func formatTilePath(level string, tile uint64, partial uint64) string {
+func formatTilePath(level string, tile uint64, width uint64) string {
 	path := "tile/" + level + "/" + formatTileIndex(tile)
-	if partial != 0 {
-		path += fmt.Sprintf(".p/%d", partial)
+	if width != entriesPerTile {
+		path += fmt.Sprintf(".p/%d", width)
 	}
 	return path
 }
