@@ -50,35 +50,11 @@ func NewServer(config *Config) (*Server, error) {
 		// can be "orders of magnitude" faster.
 		synchronous = "OFF"
 	}
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?_busy_timeout=5000&_foreign_keys=ON&_txlock=immediate&_journal_mode=WAL&_synchronous=%s", url.PathEscape(config.DBPath), url.PathEscape(synchronous)))
-	if err != nil {
-		return nil, fmt.Errorf("error opening database: %w", err)
-	}
-	defer func() {
-		if db != nil {
-			db.Close()
-		}
-	}()
-	if err := dbschema.Build(context.Background(), db, schema.Files); err != nil {
-		return nil, fmt.Errorf("error building database schema: %w", err)
-	}
-
-	var sthBytes []byte
-	if err := db.QueryRow(`SELECT sth FROM state`).Scan(&sthBytes); err != nil {
-		return nil, fmt.Errorf("error loading STH from database: %w", err)
-	}
 	server := &Server{
 		logID:            config.LogID,
 		monitoringPrefix: config.MonitoringPrefix,
 		mux:              http.NewServeMux(),
 		disableLeafIndex: config.DisableLeafIndex,
-	}
-	if sthBytes != nil {
-		sth := new(signedTreeHead)
-		if err := json.Unmarshal(sthBytes, sth); err != nil {
-			return nil, fmt.Errorf("STH stored in database is corrupted: %w", err)
-		}
-		server.sth.Store(sth)
 	}
 	submissionProxy := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -94,8 +70,34 @@ func NewServer(config *Config) (*Server, error) {
 	server.mux.Handle("GET /ct/v1/get-roots", submissionProxy)
 	server.mux.HandleFunc("GET /ct/v1/get-entry-and-proof", server.getEntryAndProof)
 
-	server.db = db
-	db = nil // prevent defer from closing db
+	if config.DBPath != "" {
+		db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?_busy_timeout=5000&_foreign_keys=ON&_txlock=immediate&_journal_mode=WAL&_synchronous=%s", url.PathEscape(config.DBPath), url.PathEscape(synchronous)))
+		if err != nil {
+			return nil, fmt.Errorf("error opening database: %w", err)
+		}
+		defer func() {
+			if db != nil {
+				db.Close()
+			}
+		}()
+		if err := dbschema.Build(context.Background(), db, schema.Files); err != nil {
+			return nil, fmt.Errorf("error building database schema: %w", err)
+		}
+
+		var sthBytes []byte
+		if err := db.QueryRow(`SELECT sth FROM state`).Scan(&sthBytes); err != nil {
+			return nil, fmt.Errorf("error loading STH from database: %w", err)
+		}
+		if sthBytes != nil {
+			sth := new(signedTreeHead)
+			if err := json.Unmarshal(sthBytes, sth); err != nil {
+				return nil, fmt.Errorf("STH stored in database is corrupted: %w", err)
+			}
+			server.sth.Store(sth)
+		}
+		server.db = db
+		db = nil // prevent defer from closing db
+	}
 
 	return server, nil
 }

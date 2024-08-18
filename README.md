@@ -35,9 +35,9 @@ go install src.agwa.name/sunglasses@latest
 
 ## Command Line Arguments
 
-### `-db PATH` (Mandatory)
+### `-db PATH`
 
-Path to database file, which will be created if necessary.
+Path to database file, which will be created if necessary.  If omitted, leaf indexing and issuer caching will be disabled.
 
 ### `-id BASE64` (Mandatory)
 

@@ -71,7 +71,10 @@ func (srv *Server) tick() error {
 		return logContactError{fmt.Errorf("error downloading latest checkpoint: %w", err)}
 	}
 
-	if srv.disableLeafIndex {
+	if srv.db == nil {
+		srv.sth.Store(sth)
+		return nil
+	} else if srv.disableLeafIndex {
 		return srv.storeSTH(sth)
 	}
 

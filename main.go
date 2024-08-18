@@ -62,9 +62,6 @@ func main() {
 	flag.BoolVar(&flags.noLeafIndex, "no-leaf-index", false, "disable leaf indexing (get-proof-by-hash endpoint won't work)")
 	flag.Parse()
 
-	if flags.db == "" {
-		log.Fatal("-db flag required")
-	}
 	if flags.id == (proxy.LogID{}) {
 		log.Fatal("-id flag required")
 	}

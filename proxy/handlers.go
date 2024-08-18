@@ -93,7 +93,7 @@ func (srv *Server) getProofByHash(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid tree_size parameter: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if srv.disableLeafIndex {
+	if srv.disableLeafIndex || srv.db == nil {
 		http.Error(w, "This log does not implement the get-proof-by-hash endpoint", http.StatusNotImplemented)
 		return
 	}
