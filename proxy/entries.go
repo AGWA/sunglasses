@@ -129,26 +129,18 @@ func (e *entry) leafInput() []byte {
 
 func (e *entry) extraData(issuers map[[32]byte]*[]byte) []byte {
 	b := cryptobyte.NewBuilder(nil)
-	if e.precertificate == nil {
-		b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
-			for _, fingerprint := range e.chain {
-				b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
-					b.AddBytes(*issuers[fingerprint])
-				})
-			}
-		})
-	} else {
+	if e.precertificate != nil {
 		b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
 			b.AddBytes(e.precertificate)
 		})
-		b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
-			for _, fingerprint := range e.chain {
-				b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
-					b.AddBytes(*issuers[fingerprint])
-				})
-			}
-		})
 	}
+	b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
+		for _, fingerprint := range e.chain {
+			b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
+				b.AddBytes(*issuers[fingerprint])
+			})
+		}
+	})
 	return b.BytesOrPanic()
 }
 
