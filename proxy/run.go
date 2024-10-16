@@ -89,6 +89,14 @@ func (srv *Server) tick() error {
 
 	log.Printf("Downloaded STH with tree size %d", sth.TreeSize)
 
+	type gap struct {
+		begin, end uint64
+	}
+	var gaps []gap
+	for begin, end := range position.Gaps {
+		gaps = append(gaps, gap{begin, end})
+	}
+
 	const workers = 500
 	results := make(chan leafHashes, workers)
 	group, ctx := errgroup.WithContext(context.Background())
@@ -140,12 +148,11 @@ func (srv *Server) tick() error {
 	})
 	startTime := time.Now()
 	var numEntries uint64
-	//for begin, end := range position.Gaps {
-	position.Gaps(func(begin, end uint64) bool {
+	for _, gap := range gaps {
 		if ctx.Err() != nil {
-			//break
-			return false
+			break
 		}
+		begin, end := gap.begin, gap.end
 		if end == 0 {
 			end = sth.TreeSize
 		}
@@ -161,8 +168,7 @@ func (srv *Server) tick() error {
 				return srv.downloadLeafHashes(ctx, sth, tile, skip, count, results)
 			})
 		}
-		return true
-	})
+	}
 
 	if err := group.Wait(); err != nil {
 		return err
