@@ -7,7 +7,7 @@ require (
 	golang.org/x/crypto v0.24.0
 	golang.org/x/mod v0.18.0
 	golang.org/x/sync v0.7.0
-	software.sslmate.com/src/certspotter v0.0.0-20240613183702-1b9a21baa85a
+	software.sslmate.com/src/certspotter v0.0.0-20241016122322-0ba0a1fef06b
 	src.agwa.name/go-dbutil v0.7.1
 	src.agwa.name/go-listener v0.6.0
 )

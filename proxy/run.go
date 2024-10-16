@@ -83,7 +83,7 @@ func (srv *Server) tick() error {
 		return err
 	}
 
-	if position.IsComplete(sth.TreeSize) {
+	if position.ContainsFirstN(sth.TreeSize) {
 		return nil
 	}
 
@@ -108,7 +108,7 @@ func (srv *Server) tick() error {
 		}
 		defer func() { tx.Rollback() }()
 		uncommitted := 0
-		for ctx.Err() == nil && !position.IsComplete(sth.TreeSize) {
+		for ctx.Err() == nil && !position.ContainsFirstN(sth.TreeSize) {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
