@@ -37,7 +37,7 @@ go install src.agwa.name/sunglasses@latest
 
 ### `-db PATH`
 
-Path to database file, which will be created if necessary.  If omitted, leaf indexing and issuer caching will be disabled.
+Path to database file, which will be created if necessary.  If omitted, leaf indexing and persistent issuer caching will be disabled.
 
 ### `-id BASE64` (Mandatory)
 
@@ -54,6 +54,10 @@ URL prefix of the log's monitoring endpoint.
 ### `-submission URL` (Mandatory)
 
 URL prefix of the log's submission endpoint.
+
+### `-user-agent STRING` (Recommended)
+
+User-Agent string to send to the log. Some logs will rate limit you if you do not include an email address or `https://` URL where you can be reached in case there are problems with your use of the log.
 
 ### `-no-leaf-index`
 
