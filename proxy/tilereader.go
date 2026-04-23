@@ -9,8 +9,9 @@ import (
 )
 
 type tileReader struct {
-	ctx    context.Context
-	prefix *url.URL
+	ctx       context.Context
+	prefix    *url.URL
+	userAgent string
 }
 
 func (*tileReader) Height() int {
@@ -29,7 +30,7 @@ func (reader *tileReader) ReadTiles(tiles []tlog.Tile) ([][]byte, error) {
 				uint64(tiles[i].W),
 			)
 			tileURL := reader.prefix.JoinPath(tilePath)
-			if resp, err := downloadRetry(ctx, tileURL.String()); err != nil {
+			if resp, err := downloadRetry(ctx, reader.userAgent, tileURL.String()); err != nil {
 				return err
 			} else {
 				tileData[i] = resp

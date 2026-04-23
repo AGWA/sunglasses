@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -27,6 +28,7 @@ type Server struct {
 	db               *sql.DB
 	issuerCache      *sync.Map // [32]byte -> []byte; used when db is nil
 	monitoringPrefix *url.URL
+	userAgent        string
 	mux              *http.ServeMux
 	sth              atomic.Pointer[signedTreeHead]
 	disableLeafIndex bool
@@ -37,6 +39,7 @@ type Config struct {
 	DBPath           string
 	SubmissionPrefix *url.URL
 	MonitoringPrefix *url.URL
+	UserAgent        string
 	UnsafeNoFsync    bool
 	DisableLeafIndex bool
 }
@@ -55,6 +58,7 @@ func NewServer(config *Config) (*Server, error) {
 	server := &Server{
 		logID:            config.LogID,
 		monitoringPrefix: config.MonitoringPrefix,
+		userAgent:        cmp.Or(config.UserAgent, "src.agwa.name/sunglasses/proxy"),
 		mux:              http.NewServeMux(),
 		disableLeafIndex: config.DisableLeafIndex,
 	}
@@ -107,7 +111,7 @@ func NewServer(config *Config) (*Server, error) {
 }
 
 func (srv *Server) tileReader(ctx context.Context) tlog.TileReader {
-	return &tileReader{ctx: ctx, prefix: srv.monitoringPrefix}
+	return &tileReader{ctx: ctx, prefix: srv.monitoringPrefix, userAgent: srv.userAgent}
 }
 
 func (srv *Server) hashReader(ctx context.Context, sth *signedTreeHead) tlog.HashReader {

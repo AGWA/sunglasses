@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"time"
 
 	"src.agwa.name/go-listener"
@@ -40,6 +41,13 @@ func parseLogIDFunc(out *proxy.LogID) func(string) error {
 	}
 }
 
+func defaultUserAgent() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		return info.Main.Path + " " + info.Main.Version
+	}
+	return ""
+}
+
 func main() {
 	var flags struct {
 		submission    *url.URL
@@ -47,6 +55,7 @@ func main() {
 		id            proxy.LogID
 		db            string
 		listen        []string
+		userAgent     string
 		unsafeNoFsync bool
 		noLeafIndex   bool
 	}
@@ -58,6 +67,7 @@ func main() {
 		flags.listen = append(flags.listen, arg)
 		return nil
 	})
+	flag.StringVar(&flags.userAgent, "user-agent", defaultUserAgent(), "User-Agent to send with HTTP requests")
 	flag.BoolVar(&flags.unsafeNoFsync, "unsafe-nofsync", false, "disable database fsync (unsafe; only appropriate during initial indexing)")
 	flag.BoolVar(&flags.noLeafIndex, "no-leaf-index", false, "disable leaf indexing (get-proof-by-hash endpoint won't work)")
 	flag.Parse()
@@ -79,6 +89,7 @@ func main() {
 		DBPath:           flags.db,
 		SubmissionPrefix: flags.submission,
 		MonitoringPrefix: flags.monitoring,
+		UserAgent:        flags.userAgent,
 		UnsafeNoFsync:    flags.unsafeNoFsync,
 		DisableLeafIndex: flags.noLeafIndex,
 	})

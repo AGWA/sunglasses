@@ -27,7 +27,7 @@ func (e *downloadError) Unwrap() error {
 	return e.Err
 }
 
-func download(ctx context.Context, url string) ([]byte, error) {
+func download(ctx context.Context, userAgent string, url string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
@@ -35,6 +35,7 @@ func download(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", userAgent)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, &downloadError{Err: err}
@@ -54,7 +55,7 @@ func download(ctx context.Context, url string) ([]byte, error) {
 	return body, nil
 }
 
-func downloadRetry(ctx context.Context, url string) ([]byte, error) {
+func downloadRetry(ctx context.Context, userAgent string, url string) ([]byte, error) {
 	const (
 		baseRetryDelay = 1 * time.Second
 		maxRetryDelay  = 10 * time.Second
@@ -64,7 +65,7 @@ func downloadRetry(ctx context.Context, url string) ([]byte, error) {
 	numRetries := 0
 	for {
 		var derr *downloadError
-		if resp, err := download(ctx, url); err == nil {
+		if resp, err := download(ctx, userAgent, url); err == nil {
 			return resp, nil
 		} else if !errors.As(err, &derr) {
 			return nil, err
@@ -91,17 +92,17 @@ func downloadRetry(ctx context.Context, url string) ([]byte, error) {
 	}
 }
 
-func downloadTile(ctx context.Context, sth *signedTreeHead, prefix *url.URL, level string, tile uint64) ([]byte, error) {
+func downloadTile(ctx context.Context, userAgent string, sth *signedTreeHead, prefix *url.URL, level string, tile uint64) ([]byte, error) {
 	if partial := sth.TreeSize - tile*entriesPerTile; partial < entriesPerTile {
-		if data, err1 := downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, partial)).String()); err1 == nil {
+		if data, err1 := downloadRetry(ctx, userAgent, prefix.JoinPath(formatTilePath(level, tile, partial)).String()); err1 == nil {
 			return data, nil
-		} else if data, err2 := downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String()); err2 == nil {
+		} else if data, err2 := downloadRetry(ctx, userAgent, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String()); err2 == nil {
 			return data, nil
 		} else {
 			return nil, err1
 		}
 	}
-	return downloadRetry(ctx, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String())
+	return downloadRetry(ctx, userAgent, prefix.JoinPath(formatTilePath(level, tile, entriesPerTile)).String())
 }
 
 func formatTilePath(level string, tile uint64, width uint64) string {

@@ -149,7 +149,7 @@ func (srv *Server) downloadEntries(ctx context.Context, sth *signedTreeHead, beg
 	skip := beginIncl % entriesPerTile
 	numEntries := min(entriesPerTile, endExcl-tile*entriesPerTile) - skip
 
-	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "data", tile)
+	data, err := downloadTile(ctx, srv.userAgent, sth, srv.monitoringPrefix, "data", tile)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte,
 		return cached.([]byte), nil
 	}
 	issuerURL := srv.monitoringPrefix.JoinPath("issuer", hex.EncodeToString(fingerprint[:]))
-	data, err := downloadRetry(ctx, issuerURL.String())
+	data, err := downloadRetry(ctx, srv.userAgent, issuerURL.String())
 	if err != nil {
 		return nil, err
 	}

@@ -179,7 +179,7 @@ func (srv *Server) tick() error {
 }
 
 func (srv *Server) downloadLeafHashes(ctx context.Context, sth *signedTreeHead, tile uint64, skip uint64, count uint64, results chan<- leafHashes) error {
-	data, err := downloadTile(ctx, sth, srv.monitoringPrefix, "0", tile)
+	data, err := downloadTile(ctx, srv.userAgent, sth, srv.monitoringPrefix, "0", tile)
 	if err != nil {
 		return logContactError{fmt.Errorf("error downloading leaf tile %d: %w", tile, err)}
 	}
@@ -221,7 +221,7 @@ func (srv *Server) processLeafHashes(tx *sql.Tx, position *merkletree.Fragmented
 
 func (srv *Server) downloadSTH() (*signedTreeHead, error) {
 	checkpointURL := srv.monitoringPrefix.JoinPath("checkpoint")
-	checkpointBytes, err := downloadRetry(context.Background(), checkpointURL.String())
+	checkpointBytes, err := downloadRetry(context.Background(), srv.userAgent, checkpointURL.String())
 	if err != nil {
 		return nil, err
 	}
