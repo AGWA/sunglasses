@@ -214,6 +214,8 @@ func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte,
 		} else if err != sql.ErrNoRows {
 			return nil, fmt.Errorf("error loading issuer from database: %w", err)
 		}
+	} else if cached, ok := srv.issuerCache.Load(fingerprint); ok {
+		return cached.([]byte), nil
 	}
 	issuerURL := srv.monitoringPrefix.JoinPath("issuer", hex.EncodeToString(fingerprint[:]))
 	data, err := downloadRetry(ctx, issuerURL.String())
@@ -227,6 +229,8 @@ func (srv *Server) getIssuer(ctx context.Context, fingerprint [32]byte) ([]byte,
 		if _, err := srv.db.ExecContext(ctx, `INSERT INTO issuer (sha256, data) VALUES ($1, $2) ON CONFLICT (sha256) DO NOTHING`, fingerprint[:], data); err != nil {
 			return nil, fmt.Errorf("error storing issuer in databaes: %w", err)
 		}
+	} else {
+		srv.issuerCache.Store(fingerprint, data)
 	}
 	return data, nil
 }

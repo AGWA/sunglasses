@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"src.agwa.name/go-dbutil/dbschema"
 	"src.agwa.name/sunglasses/proxy/schema"
+	"sync"
 	"sync/atomic"
 )
 
@@ -24,6 +25,7 @@ type LogID [32]byte
 type Server struct {
 	logID            LogID
 	db               *sql.DB
+	issuerCache      *sync.Map // [32]byte -> []byte; used when db is nil
 	monitoringPrefix *url.URL
 	mux              *http.ServeMux
 	sth              atomic.Pointer[signedTreeHead]
@@ -97,6 +99,8 @@ func NewServer(config *Config) (*Server, error) {
 		}
 		server.db = db
 		db = nil // prevent defer from closing db
+	} else {
+		server.issuerCache = new(sync.Map)
 	}
 
 	return server, nil
